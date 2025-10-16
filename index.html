@@ -6,273 +6,245 @@
 <title>PodClone</title>
 <style>
 :root {
-  --bg: #121212;
-  --card: #1e1e1e;
-  --accent: #03dac5;
-  --text: #fff;
-  --text-secondary: #ccc;
-  --radius: 14px;
-  --shadow: 0 4px 20px rgba(0,0,0,0.3);
-  --error-bg: #2a2a2a;
-  --error-text: #ff5555;
+  --bg: #ffffff;
+  --card: #ffffff;
+  --surface: #f6f7f8;
+  --accent: #1a73e8;
+  --text: #202124;
+  --text-secondary: #5f6368;
+  --radius: 6px;
+  --shadow: 0 1px 3px rgba(60,64,67,0.15);
 }
-* { box-sizing: border-box; font-family: 'Roboto', sans-serif; }
-body { margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: var(--card); box-shadow: var(--shadow); position: sticky; top: 0; z-index: 10; }
-header h1 { font-weight: 500; font-size: 1.4rem; margin: 0; }
-nav { display: flex; gap: 1rem; }
-nav button { background: none; border: none; color: var(--accent); font-weight: 500; cursor: pointer; }
-.content { flex: 1; overflow-y: auto; padding: 1rem; }
-.feed-input { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-.feed-input input { flex: 1; padding: 0.7rem 1rem; border: none; border-radius: var(--radius); background: #2a2a2a; color: var(--text); }
-.feed-input button { padding: 0.7rem 1rem; background: var(--accent); border: none; border-radius: var(--radius); color: #000; font-weight: 500; cursor: pointer; transition: 0.3s; }
-.feed-input button:hover { opacity: 0.8; }
-.episodes, .library { display: flex; flex-direction: column; gap: 1rem; }
-.episode, .subscription { background: var(--card); border-radius: var(--radius); padding: 1rem; box-shadow: var(--shadow); display: flex; gap: 1rem; align-items: flex-start; transition: transform 0.2s; }
-.episode:hover, .subscription:hover { transform: translateY(-2px); }
-.episode img, .subscription img { width: 80px; height: 80px; border-radius: var(--radius); object-fit: cover; flex-shrink: 0; }
-.episode-info, .subscription-info { flex: 1; }
-.episode-title { font-size: 1rem; font-weight: 500; margin-bottom: 0.3rem; }
-.episode-date { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem; }
-.episode button, .subscription button { background: var(--accent); color: #000; border: none; padding: 0.5rem 0.8rem; border-radius: var(--radius); font-size: 0.85rem; cursor: pointer; }
-.error-card { background: var(--error-bg); color: var(--error-text); border-radius: var(--radius); padding: 1rem; display: flex; align-items: center; gap: 0.8rem; font-weight: 500; box-shadow: var(--shadow); }
-footer.player { background: var(--card); padding: 0.8rem 1rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 -4px 10px rgba(0,0,0,0.5); position: sticky; bottom: 0; }
-.player-info { display: flex; align-items: center; gap: 0.8rem; }
-.player-info img { width: 50px; height: 50px; border-radius: var(--radius); object-fit: cover; }
-.player-title { font-size: 0.9rem; font-weight: 500; }
-.player-controls button { background: none; border: none; color: var(--accent); font-size: 1.3rem; cursor: pointer; }
+* { box-sizing: border-box; font-family: 'Roboto', Arial, sans-serif; }
+body { margin: 0; background: var(--surface); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--card); border-bottom: 1px solid #e8eaed; position: sticky; top: 0; z-index: 10; }
+header h1 { font-weight: 500; font-size: 1.1rem; margin: 0; color: var(--text); }
+nav { display: flex; gap: 0.75rem; }
+nav button { background: none; border: none; color: var(--accent); font-weight: 500; cursor: pointer; padding: 0.35rem 0.6rem; border-radius: 4px; }
+nav button.active { background: rgba(26,115,232,0.08); }
+.content { flex: 1; overflow-y: auto; padding: 1rem; max-width: 980px; margin: 0 auto; }
+.search-row { display:flex; gap:0.5rem; margin-bottom: 1rem; }
+.search-row input { flex:1; padding: 0.75rem 1rem; border-radius: 24px; border: 1px solid #dadce0; background: #fff; }
+.search-row button { padding: 0.6rem 1rem; background: var(--accent); color: #fff; border: none; border-radius: 24px; cursor: pointer; }
+.list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.card { background: var(--card); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); display: flex; gap: 12px; align-items: center; cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease; border: 1px solid transparent; }
+.card:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(60,64,67,0.12); }
+.card img { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+.card .meta { display:flex; flex-direction:column; gap:6px; }
+.card .title { font-size: 0.98rem; font-weight: 600; color: var(--text); }
+.card .subtitle { font-size: 0.85rem; color: var(--text-secondary); }
+.card .actions { margin-left:auto; display:flex; gap:8px; align-items:center; }
+.small-btn { background: none; border: 1px solid #e0e0e0; padding: 6px 8px; border-radius: 8px; cursor:pointer; font-size:0.9rem; }
+.add-btn { background: var(--accent); color: #fff; border: none; padding: 8px 10px; border-radius: 8px; cursor:pointer; }
+.detail { max-width: 800px; margin: 1rem auto; background: var(--card); border-radius: 8px; padding: 12px; box-shadow: var(--shadow); }
+.episode-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f3f4; }
+.episode-row:last-child{border-bottom:none}
+.episode-title { font-size:0.95rem; color:var(--text); }
+.footer-player { position: sticky; bottom:0; background: var(--card); border-top:1px solid #e8eaed; padding: 8px 12px; display:flex; align-items:center; gap:12px; }
+.player-info img { width:56px; height:56px; border-radius:8px; object-fit:cover; }
+.player-title { font-weight:600; }
+.error-card { padding: 12px; border-radius:8px; background: #fff3cd; color: #665c00; }
+@media (max-width:600px){ .list{grid-template-columns: 1fr;} .card img{width:56px;height:56px} }
 </style>
 </head>
 <body>
   <header>
     <h1>PodClone</h1>
     <nav>
-  <button id="exploreTab">🏠 Explore</button>
-  <button id="libraryTab">📚 Library</button>
-</nav>
-
-<div id="exploreContainer"></div>
-<div id="libraryContainer" style="display:none;"></div>
-
+      <button id="exploreTab" class="active">Preskúmať</button>
+      <button id="libraryTab">Knižnica</button>
+    </nav>
   </header>
   <main class="content">
-    <div id="exploreTab">
-      <div class="feed-input">
+    <section id="exploreSection">
+      <div class="search-row">
         <input type="text" id="searchQuery" placeholder="Hľadaj podcast podľa názvu...">
         <button id="searchBtn">Hľadať</button>
       </div>
-      <div id="episodes" class="episodes"></div>
-    </div>
-    <div id="libraryTab" class="library" style="display:none"></div>
+      <div id="results" class="list"></div>
+    </section>
+
+    <section id="librarySection" style="display:none;">
+      <div id="libraryList" class="list"></div>
+    </section>
+
+    <div id="detailView" style="display:none;"></div>
+
   </main>
-  <footer class="player" id="playerBar" style="display:none">
+
+  <div id="playerBar" class="footer-player" style="display:none;">
     <div class="player-info">
       <img id="playerImg" src="" alt="cover">
-      <div><div class="player-title" id="playerTitle"></div></div>
     </div>
-    <div class="player-controls"><button id="playPause">⏸️</button></div>
-  </footer>
+    <div>
+      <div class="player-title" id="playerTitle"></div>
+      <div id="playerEpisode" style="font-size:0.85rem;color:var(--text-secondary)"></div>
+    </div>
+    <div style="margin-left:auto;">
+      <button id="playPause" class="small-btn">⏸️</button>
+    </div>
+  </div>
+
   <audio id="audio" preload="none"></audio>
+
   <script>
+    const API_KEY = '6e09668dd40a4d2583288af26b371fee';
+
+    // UI references
     const searchQuery = document.getElementById('searchQuery');
     const searchBtn = document.getElementById('searchBtn');
-    const episodesContainer = document.getElementById('episodes');
+    const results = document.getElementById('results');
+    const libraryList = document.getElementById('libraryList');
+    const exploreTab = document.getElementById('exploreTab');
+    const libraryTab = document.getElementById('libraryTab');
+    const exploreSection = document.getElementById('exploreSection');
+    const librarySection = document.getElementById('librarySection');
+    const detailView = document.getElementById('detailView');
     const playerBar = document.getElementById('playerBar');
     const playerImg = document.getElementById('playerImg');
     const playerTitle = document.getElementById('playerTitle');
+    const playerEpisode = document.getElementById('playerEpisode');
     const playPauseBtn = document.getElementById('playPause');
-    
-const exploreTab = document.getElementById('exploreTab');
-const libraryTab = document.getElementById('libraryTab');
-const exploreContainer = document.getElementById('exploreContainer');
-const libraryContainer = document.getElementById('libraryContainer');
+    const audio = document.getElementById('audio');
 
-exploreTab.addEventListener('click', () => {
-  exploreContainer.style.display = 'block';
-  libraryContainer.style.display = 'none';
-});
+    exploreTab.addEventListener('click', () => { exploreTab.classList.add('active'); libraryTab.classList.remove('active'); exploreSection.style.display = ''; librarySection.style.display = 'none'; detailView.style.display='none'; });
+    libraryTab.addEventListener('click', () => { libraryTab.classList.add('active'); exploreTab.classList.remove('active'); exploreSection.style.display = 'none'; librarySection.style.display = ''; detailView.style.display='none'; renderLibrary(); });
 
-libraryTab.addEventListener('click', () => {
-  exploreContainer.style.display = 'none';
-  libraryContainer.style.display = 'block';
-  renderLibrary();
-});
-
-    // Listen Notes API kľúč
-    const API_KEY = '6e09668dd40a4d2583288af26b371fee';
-
-    // Funkcia na vyhľadávanie podcastov podľa názvu
-    async function searchPodcasts(query) {
-  const url = `https://listen-api.listennotes.com/api/v2/search?q=${encodeURIComponent(query)}&type=podcast`;
-  const res = await fetch(url, {
-    headers: { 'X-ListenAPI-Key': API_KEY }
-  });
-
-  if (!res.ok) {
-    throw new Error(`HTTP error! Status: ${res.status}`);
-  }
-
-  const data = await res.json();
-  console.log('Výsledky z API:', data);
-
-  // Listen Notes vracia zoznam podcastov v data.results
-  return data.results || [];
-}
-
-function addToLibrary(podcast) {
-  // Načítaj existujúce odbery z localStorage
-  let subs = JSON.parse(localStorage.getItem('podclone_subscriptions')) || [];
-
-  // Skontroluj, či už tento podcast nie je odobratý
-  if (subs.some(p => p.feedUrl === podcast.feedUrl)) {
-    alert('Tento podcast už máš v knižnici.');
-    return;
-  }
-
-  // Pridaj nový podcast do zoznamu
-  subs.push(podcast);
-  localStorage.setItem('podclone_subscriptions', JSON.stringify(subs));
-
-  alert(`Podcast „${podcast.title}“ bol pridaný do tvojej knižnice.`);
-}
-
-
-function displayPodcasts(podcasts) {
-  episodesContainer.innerHTML = '';
-
-  if (!Array.isArray(podcasts) || podcasts.length === 0) {
-    episodesContainer.innerHTML = '<div class="error-card">Žiadne výsledky pre tento názov podcastu.</div>';
-    return;
-  }
-
-  podcasts.forEach(podcast => {
-    const el = document.createElement('div');
-    el.className = 'episode';
-    el.innerHTML = `
-      <img src="${podcast.image || podcast.thumbnail}" alt="">
-      <div class="episode-info">
-        <div class="episode-title">${podcast.title_original}</div>
-        <button class="subscribeBtn">➕ Odoberať</button>
-      </div>
-    `;
-    el.querySelector('.subscribeBtn').addEventListener('click', () => {
-      addToLibrary({
-        title: podcast.title_original,
-        feedUrl: podcast.rss || '',
-        imgUrl: podcast.image || podcast.thumbnail
-      });
-    });
-    episodesContainer.appendChild(el);
-  });
-}
-function renderLibrary() {
-  const container = document.getElementById('libraryContainer');
-  const subs = JSON.parse(localStorage.getItem('podclone_subscriptions')) || [];
-
-  container.innerHTML = '';
-
-  if (subs.length === 0) {
-    container.innerHTML = '<div class="error-card">Žiadne odbery zatiaľ.</div>';
-    return;
-  }
-
-  subs.forEach(podcast => {
-    const el = document.createElement('div');
-    el.className = 'episode';
-    el.innerHTML = `
-      <img src="${podcast.imgUrl}" alt="">
-      <div class="episode-info">
-        <div class="episode-title">${podcast.title}</div>
-        <button class="removeBtn">❌ Odstrániť</button>
-      </div>
-    `;
-    el.querySelector('.removeBtn').addEventListener('click', () => {
-      removeFromLibrary(podcast.feedUrl);
-      renderLibrary();
-    });
-    container.appendChild(el);
-  });
-}
-
-function removeFromLibrary(feedUrl) {
-  let subs = JSON.parse(localStorage.getItem('podclone_subscriptions')) || [];
-  subs = subs.filter(p => p.feedUrl !== feedUrl);
-  localStorage.setItem('podclone_subscriptions', JSON.stringify(subs));
-}
-
-
-    // Obsluha kliknutia na tlačidlo "Hľadať"
-    searchBtn.addEventListener('click', async () => {
-      const query = searchQuery.value.trim();
-      if (!query) return;
-      const podcasts = await searchPodcasts(query);
-      displayPodcasts(podcasts);
-    });
-
-    // Funkcia na prehrávanie epizódy
-    function playEpisode(title, url, img) {
-      const audio = document.getElementById('audio');
-      audio.src = url;
-      audio.play();
-      playerBar.style.display = 'flex';
-      playerTitle.textContent = title;
-      playerImg.src = img;
-      playPauseBtn.textContent = '⏸️';
+    async function searchPodcasts(query){
+      const url = `https://listen-api.listennotes.com/api/v2/search?q=${encodeURIComponent(query)}&type=podcast`;
+      const res = await fetch(url, { headers: { 'X-ListenAPI-Key': API_KEY } });
+      if(!res.ok) throw new Error('Chyba pri volaní API: ' + res.status);
+      const data = await res.json();
+      return data.results || [];
     }
 
-    // Obsluha tlačidla play/pause
-    playPauseBtn.addEventListener('click', () => {
-      const audio = document.getElementById('audio');
-      if (audio.paused) {
-        audio.play();
-        playPauseBtn.textContent = '⏸️';
-      } else {
-        audio.pause();
-        playPauseBtn.textContent = '▶️';
-      }
-    });
-    async function openPodcastDetail(podcast) {
-  exploreContainer.style.display = 'none';
-  libraryContainer.style.display = 'none';
+    function saveSubscriptions(subs){ localStorage.setItem('podclone_subscriptions', JSON.stringify(subs)); }
+    function loadSubscriptions(){ return JSON.parse(localStorage.getItem('podclone_subscriptions'))||[]; }
 
-  const detailContainer = document.getElementById('detailContainer') || document.createElement('div');
-  detailContainer.id = 'detailContainer';
-  document.body.appendChild(detailContainer);
-  detailContainer.innerHTML = `<h2>${podcast.title}</h2><p>Načítavam epizódy...</p>`;
+    function addToLibrary(podcast){
+      const subs = loadSubscriptions();
+      if(subs.some(s=>s.id===podcast.id||s.feedUrl===podcast.feedUrl)) { alert('Tento podcast už máš v knižnici.'); return; }
+      subs.push(podcast);
+      saveSubscriptions(subs);
+      alert(`Podcast „${podcast.title}" pridaný do knižnice.`);
+    }
 
-  try {
-    const res = await fetch(podcast.feedUrl);
-    const text = await res.text();
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(text, 'text/xml');
-    const items = xml.querySelectorAll('item');
-    let html = '';
+    function removeFromLibrary(id){ let subs = loadSubscriptions(); subs = subs.filter(s=>s.id!==id); saveSubscriptions(subs); renderLibrary(); }
 
-    items.forEach(item => {
-      const title = item.querySelector('title')?.textContent || 'Bez názvu';
-      const audio = item.querySelector('enclosure')?.getAttribute('url');
-      html += `
-        <div class="episode">
-          <div class="episode-title">${title}</div>
-          <button onclick="playEpisode('${title}', '${audio}', '${podcast.imgUrl}')">▶️ Prehrať</button>
-        </div>`;
-    });
+    function renderCard(podcast){
+      const el = document.createElement('div'); el.className='card';
+      const img = document.createElement('img'); img.src = podcast.image || podcast.imgUrl || podcast.thumbnail || '';
+      const meta = document.createElement('div'); meta.className='meta';
+      const title = document.createElement('div'); title.className='title'; title.textContent = podcast.title || podcast.title_original || podcast.name || 'Bez názvu';
+      const subtitle = document.createElement('div'); subtitle.className='subtitle'; subtitle.textContent = podcast.publisher || podcast.publisher_original || podcast.description || '';
+      meta.appendChild(title); meta.appendChild(subtitle);
 
-    detailContainer.innerHTML = `
-      <button onclick="backToLibrary()">⬅️ Späť</button>
-      <h2>${podcast.title}</h2>
-      <img src="${podcast.imgUrl}" alt="">
-      ${html}
-    `;
-  } catch (err) {
-    detailContainer.innerHTML = `<div class="error-card">⚠️ Nepodarilo sa načítať epizódy.</div>`;
-  }
-}
+      const actions = document.createElement('div'); actions.className='actions';
+      const openBtn = document.createElement('button'); openBtn.className='small-btn'; openBtn.textContent='Detail';
+      openBtn.addEventListener('click', (e)=>{ e.stopPropagation(); openPodcastDetail(podcast); });
 
-function backToLibrary() {
-  document.getElementById('detailContainer').remove();
-  libraryContainer.style.display = 'block';
-}
+      const addBtn = document.createElement('button'); addBtn.className='add-btn'; addBtn.textContent='Odoberať';
+      addBtn.addEventListener('click',(e)=>{ e.stopPropagation(); addToLibrary({ id: podcast.id, title: podcast.title || podcast.title_original, feedUrl: podcast.rss || podcast.feedUrl || '', imgUrl: podcast.image || podcast.imgUrl || podcast.thumbnail }); });
 
+      actions.appendChild(openBtn); actions.appendChild(addBtn);
+
+      el.appendChild(img); el.appendChild(meta); el.appendChild(actions);
+      // whole card click opens detail
+      el.addEventListener('click', ()=> openPodcastDetail(podcast));
+      return el;
+    }
+
+    function displayPodcasts(podcasts){ results.innerHTML='';
+      if(!Array.isArray(podcasts)||podcasts.length===0){ results.innerHTML='<div class="error-card">Žiadne výsledky.</div>'; return; }
+      podcasts.forEach(p=>{ results.appendChild(renderCard(p)); });
+    }
+
+    searchBtn.addEventListener('click', async ()=>{ const q = searchQuery.value.trim(); if(!q) return; try{ const pods = await searchPodcasts(q); displayPodcasts(pods); }catch(err){ results.innerHTML=`<div class="error-card">Chyba: ${err.message}</div>` } });
+
+    function renderLibrary(){ libraryList.innerHTML=''; const subs = loadSubscriptions(); if(subs.length===0){ libraryList.innerHTML='<div class="error-card">Žiadne odbery zatiaľ.</div>'; return; }
+      subs.forEach(p=>{
+        const card = document.createElement('div'); card.className='card';
+        const img = document.createElement('img'); img.src=p.imgUrl||'';
+        const meta = document.createElement('div'); meta.className='meta';
+        const title = document.createElement('div'); title.className='title'; title.textContent=p.title||'Bez názvu';
+        meta.appendChild(title);
+        const actions = document.createElement('div'); actions.className='actions';
+        const openBtn = document.createElement('button'); openBtn.className='small-btn'; openBtn.textContent='Otvoriť'; openBtn.addEventListener('click',(e)=>{ e.stopPropagation(); openPodcastDetail(p); });
+        const remBtn = document.createElement('button'); remBtn.className='small-btn'; remBtn.textContent='Odobrať'; remBtn.addEventListener('click',(e)=>{ e.stopPropagation(); removeFromLibrary(p.id); });
+        actions.appendChild(openBtn); actions.appendChild(remBtn);
+        card.appendChild(img); card.appendChild(meta); card.appendChild(actions);
+        card.addEventListener('click', ()=> openPodcastDetail(p));
+        libraryList.appendChild(card);
+      });
+    }
+
+    function showPlayer(title, episodeTitle, img, url){ audio.src = url; audio.play().catch(()=>{}); playerBar.style.display='flex'; playerTitle.textContent = title; playerEpisode.textContent = episodeTitle||''; playerImg.src = img||''; playPauseBtn.textContent='⏸️'; }
+
+    playPauseBtn.addEventListener('click', ()=>{ if(audio.paused){ audio.play(); playPauseBtn.textContent='⏸️'; } else { audio.pause(); playPauseBtn.textContent='▶️'; } });
+
+    async function openPodcastDetail(podcast){
+      detailView.style.display='block'; exploreSection.style.display='none'; librarySection.style.display='none';
+      detailView.innerHTML = '';
+
+      const container = document.createElement('div'); container.className='detail';
+      const head = document.createElement('div'); head.style.display='flex'; head.style.gap='12px'; head.style.alignItems='center';
+      const img = document.createElement('img'); img.src = podcast.image || podcast.imgUrl || podcast.img || '';
+      img.style.width='96px'; img.style.height='96px'; img.style.borderRadius='8px'; img.style.objectFit='cover';
+      const info = document.createElement('div');
+      const title = document.createElement('div'); title.style.fontSize='1.1rem'; title.style.fontWeight='700'; title.textContent = podcast.title || podcast.title_original || podcast.name || 'Bez názvu';
+      const sub = document.createElement('div'); sub.style.color='var(--text-secondary)'; sub.textContent = podcast.publisher || podcast.publisher_original || '';
+      info.appendChild(title); info.appendChild(sub);
+      head.appendChild(img); head.appendChild(info);
+
+      const backBtn = document.createElement('button'); backBtn.className='small-btn'; backBtn.textContent='⬅ Späť'; backBtn.addEventListener('click', ()=>{ detailView.style.display='none'; if(libraryTab.classList.contains('active')){ librarySection.style.display=''; } else { exploreSection.style.display=''; } });
+      head.appendChild(backBtn);
+
+      container.appendChild(head);
+
+      const episodesList = document.createElement('div'); episodesList.style.marginTop='12px'; episodesList.innerHTML = '<div style="color:var(--text-secondary)">Načítavam epizódy…</div>';
+      container.appendChild(episodesList);
+      detailView.appendChild(container);
+
+      // Try ListenNotes API first (if id exists), otherwise try RSS fetch
+      try{
+        let episodes = [];
+        if(podcast.id){
+          const url = `https://listen-api.listennotes.com/api/v2/podcasts/${podcast.id}?sort=recent_first`;
+          const res = await fetch(url, { headers: { 'X-ListenAPI-Key': API_KEY } });
+          if(res.ok){ const data = await res.json(); episodes = data.episodes || []; }
+        }
+        if(episodes.length===0 && (podcast.rss || podcast.feedUrl)){ 
+          // try RSS
+          const r = await fetch(podcast.rss || podcast.feedUrl);
+          const text = await r.text();
+          const parser = new DOMParser(); const xml = parser.parseFromString(text,'text/xml');
+          const items = xml.querySelectorAll('item');
+          items.forEach(item=>{
+            const title = item.querySelector('title')?.textContent || 'Bez názvu';
+            const audioUrl = item.querySelector('enclosure')?.getAttribute('url') || item.querySelector('link')?.textContent || '';
+            episodes.push({ title, audio: audioUrl });
+          });
+        }
+
+        if(episodes.length===0){ episodesList.innerHTML = '<div class="error-card">Nepodarilo sa načítať epizódy alebo nie sú verejne dostupné (CORS / feed).</div>'; return; }
+
+        episodesList.innerHTML = '';
+        episodes.forEach(ep=>{
+          const row = document.createElement('div'); row.className='episode-row';
+          const t = document.createElement('div'); t.className='episode-title'; t.textContent = ep.title || ep.title_original || 'Bez názvu';
+          const btns = document.createElement('div'); btns.style.display='flex'; btns.style.gap='8px';
+          const play = document.createElement('button'); play.className='small-btn'; play.textContent='▶ Prehrať';
+          play.addEventListener('click', ()=> showPlayer(title.textContent, t.textContent, img.src, ep.audio));
+          btns.appendChild(play);
+          row.appendChild(t); row.appendChild(btns);
+          episodesList.appendChild(row);
+        });
+
+      }catch(err){ episodesList.innerHTML = `<div class="error-card">Chyba pri načítaní epizód: ${err.message}</div>`; }
+    }
+
+    // Initial render
+    renderLibrary();
   </script>
 </body>
+</html>
