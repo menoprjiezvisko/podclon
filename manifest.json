@@ -1,0 +1,44 @@
+/* ================== manifest.json ================== */
+{
+  "short_name": "PodClone",
+  "name": "PodClone — offline podcast player",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}
+
+
+/* ================== sw.js ================== */
+const CACHE = 'podclone-v1';
+const OFFLINE_URL = 'index.html';
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE).then(cache => cache.addAll([
+      OFFLINE_URL,
+      'styles.css',
+      'app.js',
+      'idb.js'
+    ]))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  // simple cache-first for app shell
+  if (url.origin === location.origin) {
+    event.respondWith(
+      caches.match(event.request).then(resp => resp || fetch(event.request).catch(()=>caches.match(OFFLINE_URL)))
+    );
+  }
+});
