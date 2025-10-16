@@ -47,6 +47,8 @@ nav button.active { background: rgba(26,115,232,0.08); }
 .progress { height:6px; background:#e9ecef; border-radius:6px; width:240px; cursor:pointer; }
 .progress > .bar { height:100%; background:var(--accent); width:0%; border-radius:6px; }
 .time { font-size:0.82rem; color:var(--text-secondary); margin-left:8px; }
+.modal { position:fixed; left:0; top:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); z-index:1000; }
+.modal .card { width:90%; max-width:720px; }
 .error-card { padding: 12px; border-radius:8px; background: #fff3cd; color: #665c00; }
 @media (max-width:600px){ .list{grid-template-columns: 1fr;} .card img{width:56px;height:56px} .progress{width:120px} }
 </style>
@@ -132,38 +134,74 @@ nav button.active { background: rgba(26,115,232,0.08); }
     function saveSubscriptions(subs){ localStorage.setItem('podclone_subscriptions', JSON.stringify(subs)); }
     function loadSubscriptions(){ return JSON.parse(localStorage.getItem('podclone_subscriptions'))||[]; }
 
-    function normalizeFeed(p){
-      const feed = p.rss || p.feedUrl || p.feed_url || p.xmlUrl || p.rssUrl || null;
-      return feed && feed.trim().length>0 ? feed : null;
+    function normalizeFeedFromAny(p){
+      if(!p) return null;
+      if(typeof p === 'string') return p.trim() || null;
+      const feed = p.rss || p.feedUrl || p.feed_url || p.xmlUrl || p.rssUrl || p.feed || null;
+      return feed && typeof feed === 'string' && feed.trim().length>0 ? feed.trim() : null;
     }
 
-    function getUniqueKey(p){
-      // prefer API id, then feed url, then title
-      return p.id || normalizeFeed(p) || (p.title || p.title_original || p.name || '').trim() || null;
+    function getStoreKey(p){
+      if(!p) return null;
+      if(typeof p === 'string') return (p.startsWith('id:')||p.startsWith('feed:')||p.startsWith('t:'))?p:getStoreKey({feedUrl:p});
+      if(p.id) return `id:${p.id}`;
+      const feed = normalizeFeedFromAny(p);
+      if(feed) return `feed:${feed}`;
+      const title = (p.title || p.title_original || p.name || '').trim();
+      const publisher = (p.publisher || p.publisher_original || p.author || '').trim();
+      if(title || publisher) return `t:${title}||${publisher}`;
+      return null;
     }
 
     function addToLibraryRaw(p){
       const subs = loadSubscriptions();
-      const key = getUniqueKey(p);
-      if(!key){ alert('Nepodarilo sa identifikovať podcast pre uloženie.'); return; }
-      // check duplicates by id or by feedUrl (only when both are present)
-      const exists = subs.some(s=> (s.id && p.id && s.id===p.id) || (s.feedUrl && normalizeFeed(p) && s.feedUrl===normalizeFeed(p)) );
+      const newKey = getStoreKey(p);
+      if(!newKey){ alert('Nepodarilo sa identifikovať podcast pre uloženie.'); return; }
+      const exists = subs.some(s => {
+        const sid = getStoreKey(s);
+        if(!sid) return false;
+        // exact match only
+        if(sid === newKey) return true;
+        // if both have ids compare
+        if(s.id && p.id && s.id === p.id) return true;
+        // if both have feed compare normalized
+        const sf = normalizeFeedFromAny(s);
+        const pf = normalizeFeedFromAny(p);
+        if(sf && pf && sf === pf) return true;
+        // fallback: title+publisher match and both non-empty
+        const st = (s.title||'').trim(); const sp = (s.publisher||'').trim();
+        const pt = (p.title||p.title_original||'').trim(); const pp = (p.publisher||p.publisher_original||'').trim();
+        if(st && pt && sp && pp && st===pt && sp===pp) return true;
+        return false;
+      });
       if(exists){ alert('Tento podcast už máš v knižnici.'); return; }
-      const toSave = { id: p.id || null, title: p.title || p.title_original || p.name || '', feedUrl: normalizeFeed(p), imgUrl: p.image || p.imgUrl || p.thumbnail || '' , publisher: p.publisher || p.publisher_original || '' };
+      const toSave = {
+        id: p.id || null,
+        title: p.title || p.title_original || p.name || '',
+        feedUrl: normalizeFeedFromAny(p),
+        imgUrl: p.image || p.imgUrl || p.thumbnail || '',
+        publisher: p.publisher || p.publisher_original || ''
+      };
       subs.push(toSave);
       saveSubscriptions(subs);
       renderLibrary();
       alert(`Podcast „${toSave.title}" pridaný do knižnice.`);
     }
 
-    function removeFromLibrary(idOrFeed){ let subs = loadSubscriptions(); subs = subs.filter(s=> !(s.id===idOrFeed || s.feedUrl===idOrFeed)); saveSubscriptions(subs); renderLibrary(); }
+    function removeFromLibrary(idOrFeed){ let subs = loadSubscriptions(); subs = subs.filter(s=> {
+      const sid = getStoreKey(s);
+      if(getStoreKey(idOrFeed) && sid && getStoreKey(idOrFeed)===sid) return false;
+      if(s.id && idOrFeed === s.id) return false;
+      if(s.feedUrl && idOrFeed === s.feedUrl) return false;
+      return true;
+    }); saveSubscriptions(subs); renderLibrary(); }
 
     function renderCard(p){
       const el = document.createElement('div'); el.className='card';
       const img = document.createElement('img'); img.src = p.image || p.imgUrl || p.thumbnail || '';
       const meta = document.createElement('div'); meta.className='meta';
       const title = document.createElement('div'); title.className='title'; title.textContent = p.title || p.title_original || p.name || 'Bez názvu';
-      const subtitle = document.createElement('div'); subtitle.className='subtitle'; subtitle.textContent = p.publisher || p.publisher_original || p.description || '';
+      const subtitle = document.createElement('div'); subtitle.className='subtitle'; subtitle.textContent = p.publisher || p.publisher_original || '';
       meta.appendChild(title); meta.appendChild(subtitle);
 
       const actions = document.createElement('div'); actions.className='actions';
@@ -180,12 +218,18 @@ nav button.active { background: rgba(26,115,232,0.08); }
       return el;
     }
 
-    function displayPodcasts(podcasts){ results.innerHTML='';
-      if(!Array.isArray(podcasts)||podcasts.length===0){ results.innerHTML='<div class="error-card">Žiadne výsledky.</div>'; return; }
-      podcasts.forEach(p=>{ results.appendChild(renderCard(p)); });
-    }
+    function displayPodcasts(podcasts){ results.innerHTML=''; if(!Array.isArray(podcasts)||podcasts.length===0){ results.innerHTML='<div class="error-card">Žiadne výsledky.</div>'; return; } podcasts.forEach(p=>{ results.appendChild(renderCard(p)); }); }
 
-    searchBtn.addEventListener('click', async ()=>{ const q = searchQuery.value.trim(); if(!q) return; try{ const pods = await searchPodcasts(q); displayPodcasts(pods); }catch(err){ results.innerHTML=`<div class="error-card">Chyba: ${err.message}</div>` } });
+    // search on button, Enter and on typing (debounced)
+    let searchTimeout = null;
+    function doSearch(){
+      const q = searchQuery.value.trim();
+      if(!q) { results.innerHTML = ''; return; }
+      searchPodcasts(q).then(pods => displayPodcasts(pods)).catch(err => { results.innerHTML = `<div class="error-card">Chyba: ${err.message}</div>`; });
+    }
+    searchBtn.addEventListener('click', () => doSearch());
+    searchQuery.addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(doSearch, 300); });
+    searchQuery.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(searchTimeout); doSearch(); } });
 
     function renderLibrary(){ libraryList.innerHTML=''; const subs = loadSubscriptions(); if(subs.length===0){ libraryList.innerHTML='<div class="error-card">Žiadne odbery zatiaľ.</div>'; return; }
       subs.forEach(p=>{
@@ -206,11 +250,16 @@ nav button.active { background: rgba(26,115,232,0.08); }
     }
 
     function showPlayer(showTitle, episodeTitle, img, url, episodeMeta){
+      if(!url){ alert('Nebolo nájdené audio URL pre túto epizódu.'); return; }
       audio.src = url || '';
       audio.play().catch(()=>{});
-      playerBar.style.display='flex'; playerTitle.textContent = showTitle || ''; playerEpisode.textContent = episodeTitle||''; playerImg.src = img||''; playPauseBtn.textContent='⏸️';
-      // show episode metadata tooltip or small info
-      if(episodeMeta && episodeMeta.pubDate){ /* could show more */ }
+      playerBar.style.display='flex';
+      playerTitle.textContent = showTitle || '';
+      playerEpisode.textContent = episodeTitle||'';
+      playerImg.src = img||'';
+      playPauseBtn.textContent='⏸️';
+      // set episode meta on player (for now show in subtitle)
+      if(episodeMeta){ /* can be extended */ }
     }
 
     playPauseBtn.addEventListener('click', ()=>{ if(!audio.src) return; if(audio.paused){ audio.play(); playPauseBtn.textContent='⏸️'; } else { audio.pause(); playPauseBtn.textContent='▶️'; } });
@@ -223,11 +272,9 @@ nav button.active { background: rgba(26,115,232,0.08); }
       timeLabel.textContent = `${format(audio.currentTime)} / ${format(audio.duration)}`;
     });
 
-    progressBar.addEventListener('click', (e)=>{
-      const rect = progressBar.getBoundingClientRect(); const x = e.clientX - rect.left; const pct = x / rect.width; if(audio.duration) audio.currentTime = pct * audio.duration;
-    });
+    progressBar.addEventListener('click', (e)=>{ const rect = progressBar.getBoundingClientRect(); const x = e.clientX - rect.left; const pct = x / rect.width; if(audio.duration) audio.currentTime = pct * audio.duration; });
 
-    // Detail view: pagination and metadata
+    // Episode detail modal + pager in podcast detail
     async function openPodcastDetail(podcast){
       detailView.style.display='block'; exploreSection.style.display='none'; librarySection.style.display='none';
       detailView.innerHTML = '';
@@ -242,8 +289,13 @@ nav button.active { background: rgba(26,115,232,0.08); }
       info.appendChild(title); info.appendChild(sub);
       head.appendChild(img); head.appendChild(info);
 
-      const backBtn = document.createElement('button'); backBtn.className='small-btn'; backBtn.textContent='⬅ Späť'; backBtn.addEventListener('click', ()=>{ detailView.style.display='none'; if(libraryTab.classList.contains('active')){ librarySection.style.display=''; } else { exploreSection.style.display=''; } });
-      head.appendChild(backBtn);
+      const controlsRight = document.createElement('div'); controlsRight.style.marginLeft='auto'; controlsRight.style.display='flex'; controlsRight.style.gap='8px';
+      const subscribeBtn = document.createElement('button'); subscribeBtn.className='add-btn'; subscribeBtn.textContent='Odoberať';
+      subscribeBtn.addEventListener('click', ()=> addToLibraryRaw(podcast));
+      const backBtn = document.createElement('button'); backBtn.className='small-btn'; backBtn.textContent='⬅ Späť';
+      backBtn.addEventListener('click', ()=>{ detailView.style.display='none'; if(libraryTab.classList.contains('active')){ librarySection.style.display=''; } else { exploreSection.style.display=''; } });
+      controlsRight.appendChild(subscribeBtn); controlsRight.appendChild(backBtn);
+      head.appendChild(controlsRight);
 
       container.appendChild(head);
 
@@ -253,8 +305,8 @@ nav button.active { background: rgba(26,115,232,0.08); }
 
       // pager controls
       const pager = document.createElement('div'); pager.style.display='flex'; pager.style.justifyContent='space-between'; pager.style.alignItems='center'; pager.style.marginTop='10px';
-      const prevBtn = document.createElement('button'); prevBtn.className='small-btn'; prevBtn.textContent='Predošlé';
-      const nextBtn = document.createElement('button'); nextBtn.className='small-btn'; nextBtn.textContent='Ďalšie';
+      const prevBtn = document.createElement('button'); prevBtn.type='button'; prevBtn.className='small-btn'; prevBtn.textContent='Predošlé';
+      const nextBtn = document.createElement('button'); nextBtn.type='button'; nextBtn.className='small-btn'; nextBtn.textContent='Ďalšie';
       const pageInfo = document.createElement('div'); pageInfo.style.color='var(--text-secondary)';
       pager.appendChild(prevBtn); pager.appendChild(pageInfo); pager.appendChild(nextBtn);
       container.appendChild(pager);
@@ -262,7 +314,7 @@ nav button.active { background: rgba(26,115,232,0.08); }
       detailView.appendChild(container);
 
       let episodes = [];
-      let perPage = 10; let page = 1;
+      const perPage = 10; let page = 1;
 
       async function loadEpisodes(){
         episodesList.innerHTML = '<div style="color:var(--text-secondary)">Načítavam epizódy…</div>';
@@ -271,17 +323,11 @@ nav button.active { background: rgba(26,115,232,0.08); }
           if(podcast.id){
             const url = `https://listen-api.listennotes.com/api/v2/podcasts/${podcast.id}?sort=recent_first`;
             const res = await fetch(url, { headers: { 'X-ListenAPI-Key': API_KEY } });
-            if(res.ok){ const data = await res.json(); episodes = data.episodes || []; // data may include description, total_episodes
-            // show metadata
-            if(data.description) {
-              const md = document.createElement('div'); md.style.marginTop='10px'; md.innerHTML = data.description; container.insertBefore(md, episodesList);
-            }
-            }
+            if(res.ok){ const data = await res.json(); episodes = data.episodes || []; if(data.description){ const md = document.createElement('div'); md.style.marginTop='10px'; md.innerHTML = data.description; container.insertBefore(md, episodesList); } }
           }
 
-          if(episodes.length===0 && (podcast.rss || podcast.feedUrl || podcast.feedUrl===null)){ 
-            // try RSS
-            const feed = podcast.rss || podcast.feedUrl || podcast.feedUrl || null;
+          if(episodes.length===0){
+            const feed = normalizeFeedFromAny(podcast);
             if(feed){
               const r = await fetch(feed);
               const text = await r.text();
@@ -289,10 +335,11 @@ nav button.active { background: rgba(26,115,232,0.08); }
               const items = Array.from(xml.querySelectorAll('item'));
               episodes = items.map(item=>{
                 const title = item.querySelector('title')?.textContent || 'Bez názvu';
-                const audioUrl = item.querySelector('enclosure')?.getAttribute('url') || '';
+                const audioUrl = item.querySelector('enclosure')?.getAttribute('url') || item.querySelector('link')?.textContent || '';
                 const pubDate = item.querySelector('pubDate')?.textContent || '';
                 const duration = item.querySelector('itunes\:duration')?.textContent || item.querySelector('duration')?.textContent || '';
-                const desc = item.querySelector('description')?.textContent || '';
+                const descNode = item.querySelector('description') || item.querySelector('content\:encoded');
+                const desc = descNode?.textContent || '';
                 return { title, audio: audioUrl, pubDate, duration, description: desc };
               });
             }
@@ -304,25 +351,60 @@ nav button.active { background: rgba(26,115,232,0.08); }
         }catch(err){ episodesList.innerHTML = `<div class="error-card">Chyba pri načítaní epizód: ${err.message}</div>`; }
       }
 
+      function openEpisodeDetail(ep){
+        // modal with episode metadata and playback controls (uses same global audio)
+        const modal = document.createElement('div'); modal.className='modal';
+        const card = document.createElement('div'); card.className='card'; card.style.flexDirection='column';
+        const h = document.createElement('div'); h.style.display='flex'; h.style.justifyContent='space-between'; h.style.width='100%';
+        const info = document.createElement('div');
+        const et = document.createElement('div'); et.style.fontWeight='700'; et.textContent = ep.title || 'Bez názvu';
+        const em = document.createElement('div'); em.style.color='var(--text-secondary)'; em.textContent = `${ep.pubDate? new Date(ep.pubDate).toLocaleString() : ''}${ep.duration? ' • ' + ep.duration : ''}`;
+        info.appendChild(et); info.appendChild(em);
+        const closeBtn = document.createElement('button'); closeBtn.className='small-btn'; closeBtn.textContent='Zavrieť';
+        closeBtn.addEventListener('click', ()=> { document.body.removeChild(modal); if(audio.paused) playPauseBtn.textContent='▶️'; });
+        h.appendChild(info); h.appendChild(closeBtn);
+        card.appendChild(h);
+
+        const desc = document.createElement('div'); desc.style.marginTop='10px'; desc.innerHTML = ep.description || '<i>Žiadny popis</i>';
+        card.appendChild(desc);
+
+        // controls: play/pause, progress
+        const controls = document.createElement('div'); controls.style.display='flex'; controls.style.alignItems='center'; controls.style.gap='8px'; controls.style.marginTop='12px';
+        const play = document.createElement('button'); play.className='add-btn'; play.textContent='Prehrať';
+        play.addEventListener('click', ()=>{
+          if(!ep.audio){ alert('Žiadne audio URL pre túto epizódu.'); return; }
+          showPlayer(title.textContent, ep.title, img.src, ep.audio, {pubDate:ep.pubDate, duration: ep.duration, description: ep.description});
+        });
+        controls.appendChild(play);
+        card.appendChild(controls);
+
+        // attach
+        modal.appendChild(card);
+        document.body.appendChild(modal);
+      }
+
       function renderPage(){
         const start = (page-1)*perPage; const pageItems = episodes.slice(start, start+perPage);
         episodesList.innerHTML = '';
         pageInfo.textContent = `Strana ${page} • ${episodes.length} dielov`;
         pageItems.forEach(ep=>{
           const row = document.createElement('div'); row.className='episode-row';
-          const left = document.createElement('div');
+          const left = document.createElement('div'); left.style.maxWidth='70%';
           const t = document.createElement('div'); t.className='episode-title'; t.textContent = ep.title || 'Bez názvu';
           const m = document.createElement('div'); m.className='episode-meta'; m.textContent = `${ep.pubDate ? new Date(ep.pubDate).toLocaleString() : ''}${ep.duration? ' • ' + ep.duration : ''}`;
           left.appendChild(t); left.appendChild(m);
           const btns = document.createElement('div'); btns.style.display='flex'; btns.style.gap='8px';
           const play = document.createElement('button'); play.className='small-btn'; play.textContent='▶ Prehrať';
-          play.addEventListener('click', ()=> showPlayer(title.textContent, t.textContent, img.src, ep.audio, {pubDate:ep.pubDate, duration: ep.duration, description: ep.description}));
-          btns.appendChild(play);
+          play.addEventListener('click', (e)=>{ e.stopPropagation(); showPlayer(title.textContent, t.textContent, img.src, ep.audio, {pubDate:ep.pubDate, duration: ep.duration, description: ep.description}); });
+          const detailBtn = document.createElement('button'); detailBtn.className='small-btn'; detailBtn.textContent='Detaily';
+          detailBtn.addEventListener('click', (e)=>{ e.stopPropagation(); openEpisodeDetail(ep); });
+          btns.appendChild(play); btns.appendChild(detailBtn);
           row.appendChild(left); row.appendChild(btns);
+          row.addEventListener('click', ()=> openEpisodeDetail(ep));
           episodesList.appendChild(row);
         });
 
-        prevBtn.disabled = page<=1; nextBtn.disabled = start+perPage>=episodes.length;
+        prevBtn.disabled = page<=1; nextBtn.disabled = (page*perPage) >= episodes.length;
       }
 
       prevBtn.addEventListener('click', ()=>{ if(page>1){ page--; renderPage(); }});
